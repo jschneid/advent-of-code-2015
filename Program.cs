@@ -6,7 +6,7 @@ namespace advent_of_code_2015
     {
         static void Main(string[] args)
         {
-            Day01 program = new Day01();
+            var program = new Day02();
             program.Run();
         }
     }
