@@ -36,7 +36,7 @@ def wire_up(wires)
                        input.to_i
                      else
                        wires[input]
-                     end
+      end
     end
     wire.inputs = wire_inputs
   end
@@ -83,5 +83,10 @@ def run_logic_gates(wires)
 end
 
 wires = read_wires
+wire_up(wires)
+wire_a_signal = run_logic_gates(wires)
+
+wires = read_wires
+wires['b'].value = wire_a_signal
 wire_up(wires)
 p run_logic_gates(wires)
