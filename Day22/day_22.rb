@@ -6,7 +6,8 @@ class Player
                 :shield_turns_left,
                 :poison_turns_left,
                 :recharge_turns_left,
-                :mana_points_spent
+                :mana_points_spent,
+                :rounds_elapsed
 
   def initialize(hit_points:, mana_points:)
     @hit_points = hit_points
@@ -15,6 +16,7 @@ class Player
     @poison_turns_left = 0
     @recharge_turns_left = 0
     @mana_points_spent = 0
+    @rounds_elapsed = 0
   end
 
   def armor
@@ -23,6 +25,9 @@ class Player
 
   def available_actions
     return nil if @mana_points < 53
+
+    # Improve runtime by culling potential very slow battle plans
+    return nil if @rounds_elapsed > 12
 
     actions = [:magic_missile]
     actions << :drain if @mana_points >= 73
@@ -34,6 +39,8 @@ class Player
   end
 
   def cast_spell(spell, enemy)
+    @rounds_elapsed += 1
+
     if spell == :magic_missile
       @mana_points -= 53
       @mana_points_spent += 53
@@ -85,8 +92,13 @@ def read_boss_enemy
   Enemy.new(data[0][12..].to_i, data[1][8..].to_i)
 end
 
-def least_mana_spent_in_victory(player, enemy)
+def least_mana_spent_in_victory(player, enemy, difficulty)
   # Player turn
+  if difficulty == :hard
+    player.hit_points -= 1
+    return Float::INFINITY if player.hit_points <= 0
+  end
+
   player.apply_start_of_turn_effects(enemy)
 
   return player.mana_points_spent if enemy.hit_points <= 0
@@ -102,13 +114,13 @@ def least_mana_spent_in_victory(player, enemy)
 
     p.cast_spell(action, e)
 
+    # Boss turn
+    p.apply_start_of_turn_effects(e)
+
     if e.hit_points <= 0
       minimum_mana_spent_in_victory = p.mana_points_spent if p.mana_points_spent < minimum_mana_spent_in_victory
       next
     end
-
-    # Boss turn
-    player.apply_start_of_turn_effects(enemy)
 
     p.hit_points -= unmitigated_damage(e.damage, p.armor)
 
@@ -117,7 +129,7 @@ def least_mana_spent_in_victory(player, enemy)
     end
 
     # Next round
-    minimum_mana_eventually_spent_in_victory = least_mana_spent_in_victory(p, e)
+    minimum_mana_eventually_spent_in_victory = least_mana_spent_in_victory(p, e, difficulty)
     minimum_mana_spent_in_victory = minimum_mana_eventually_spent_in_victory if minimum_mana_eventually_spent_in_victory < minimum_mana_spent_in_victory
   end
 
@@ -127,5 +139,4 @@ end
 enemy = read_boss_enemy
 player = Player.new(hit_points: 50, mana_points: 500)
 
-p least_mana_spent_in_victory(player, enemy)
-
+p least_mana_spent_in_victory(player, enemy, :normal)
