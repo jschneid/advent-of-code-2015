@@ -1,29 +1,18 @@
-starting = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-
-packages = File.readlines('input.txt').map(&:to_i)
-p packages
-
-group_weight = packages.sum / 3
-
-# packages.combination(3)
-
-p "The target weight is #{group_weight}"
-
-@target_weight_groups = []
+def read_packages
+  File.readlines('input.txt').map(&:to_i)
+end
 
 # https://stackoverflow.com/a/4633515/12484
 def subset_sum(numbers, target, partial = [])
-  s = partial.inject 0, :+
-  # check if the partial sum is equals to target
+  sum = partial.sum
 
-  # puts "sum(#{partial})=#{target}" if s == target
-  @target_weight_groups << partial if s == target
+  @target_weight_groups << partial if sum == target
 
-  return if s >= target # if we reach the number why bother to continue
+  return if sum >= target
 
   (0..(numbers.length - 1)).each do |i|
     n = numbers[i]
-    remaining = numbers.drop(i+1)
+    remaining = numbers.drop(i + 1)
     subset_sum(remaining, target, partial + [n])
   end
 end
@@ -36,55 +25,49 @@ def minimum_quantum_entanglement(packages_groups)
   packages_groups.map { |group| quantum_entanglement(group) }.min
 end
 
-subset_sum(packages, group_weight)
+def get_first_group_potential_ideal_configurations(packages)
+  @target_weight_groups.sort_by!(&:length)
 
-p "Found #{@target_weight_groups.count} groups"
+  first_group_potential_ideal_configurations = []
 
-ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-elapsed = ending - starting
-p "elapsed: #{elapsed}"
+  (0..@target_weight_groups.count - 3).each do |i|
+    break if !first_group_potential_ideal_configurations.empty? && @target_weight_groups[i].length > first_group_potential_ideal_configurations[0].length
 
-@target_weight_groups.sort_by!(&:length)
-
-p "The minimum first group length is #{@target_weight_groups[0].length}"
-p "There are #{@target_weight_groups.select { |twg| twg.length == @target_weight_groups[0].length }.length} such groups"
-
-first_group_potential_ideal_configurations = []
-
-(0..@target_weight_groups.count - 3).each do |i|
-  break if !first_group_potential_ideal_configurations.empty? && @target_weight_groups[i].length > first_group_potential_ideal_configurations[0].length
-
-  p "Looking at first group #{@target_weight_groups[i]}..."
-
-  (i + 1..@target_weight_groups.count - 2).each do |j|
-    break if !first_group_potential_ideal_configurations.empty? && first_group_potential_ideal_configurations.last == @target_weight_groups[i]
-
-    next unless(@target_weight_groups[i] & @target_weight_groups[j]).empty?
-
-    (j + 1..@target_weight_groups.count - 1).each do |k|
+    (i + 1..@target_weight_groups.count - 2).each do |j|
       break if !first_group_potential_ideal_configurations.empty? && first_group_potential_ideal_configurations.last == @target_weight_groups[i]
 
-      combined = @target_weight_groups[i] + @target_weight_groups[j] + @target_weight_groups[k]
+      next unless (@target_weight_groups[i] & @target_weight_groups[j]).empty?
 
-      next unless combined.length == packages.length
+      (j + 1..@target_weight_groups.count - 1).each do |k|
+        break if !first_group_potential_ideal_configurations.empty? && first_group_potential_ideal_configurations.last == @target_weight_groups[i]
 
-      next unless (combined.detect.with_index { |e, idx| idx != combined.rindex(e) }).nil?
+        combined = @target_weight_groups[i] + @target_weight_groups[j] + @target_weight_groups[k]
 
-      p "Found a solution!: #{@target_weight_groups[i]} + #{@target_weight_groups[j]} + #{@target_weight_groups[k]}"
+        next unless combined.length == packages.length
 
-      first_group_potential_ideal_configurations << @target_weight_groups[i]
+        next unless (combined.detect.with_index { |e, idx| idx != combined.rindex(e) }).nil?
 
-      if @target_weight_groups[i].length == @target_weight_groups[j].length
-        first_group_potential_ideal_configurations << @target_weight_groups[j]
+        first_group_potential_ideal_configurations << @target_weight_groups[i]
+
+        if @target_weight_groups[i].length == @target_weight_groups[j].length
+          first_group_potential_ideal_configurations << @target_weight_groups[j]
+        end
       end
     end
   end
+
+  first_group_potential_ideal_configurations
 end
 
-p "Found #{first_group_potential_ideal_configurations} potential first group solutions"
+packages = read_packages
 
-ending = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-elapsed = ending - starting
-p "elapsed: #{elapsed}"
+target_weight = packages.sum / 3
+
+# Populate @target_weight_groups with all subsets of packages
+# whose total weight is the target weight.
+@target_weight_groups = []
+subset_sum(packages, target_weight)
+
+first_group_potential_ideal_configurations = get_first_group_potential_ideal_configurations(packages)
 
 p minimum_quantum_entanglement(first_group_potential_ideal_configurations)
